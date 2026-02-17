@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Rto</title>
+    <title>Rto Quiz</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -27,6 +27,11 @@
         padding: 20px;
         background-color: rgba(0, 0, 0, 0.8);
         color: #fff;
+        min-height: 100vh; /* Ensure body takes full height */
+      }
+
+      .main-container {
+        width: 100%;
       }
 
       .options {
@@ -55,6 +60,7 @@
 
       img {
         width: fit-content;
+        max-width: 100%; /* Prevent overflow */
         padding: 20px;
       }
 
@@ -67,40 +73,80 @@
         margin-bottom: 5px;
       }
 
+      /* Navigation dots for mobile */
+      .nav-indicator {
+        display: none;
+        text-align: center;
+        margin-top: 10px;
+        color: gray;
+      }
+
+      /* --- MOBILE SWIPE LOGIC CSS --- */
       @media (max-width: 480px) {
         .main-container {
-          max-width: 455px;
+          max-width: 100%;
+          height: 90vh; /* Fixed height for the card container */
+          position: relative; /* Needed for absolute positioning children */
+          overflow: hidden; /* Hide cards that are off-screen */
         }
+
         .question-tab {
           flex-direction: column;
+          height: 100%;
+          width: 100%;
+
+          /* Absolute positioning to stack them */
+          position: absolute;
+          top: 0;
+          left: 0;
+
+          /* Transition for the swipe animation */
+          transition:
+            transform 0.3s ease-in-out,
+            opacity 0.3s ease;
+          opacity: 0;
+          pointer-events: none; /* Prevent clicking hidden cards */
+
+          /* Start off-screen to the right by default */
+          transform: translateX(100%);
+        }
+
+        /* The class active will be added by JS to show the current card */
+        .question-tab.active {
+          opacity: 1;
+          pointer-events: all;
+          transform: translateX(0);
+          z-index: 2;
+        }
+
+        /* Class for cards that have been swiped to the left */
+        .question-tab.prev {
+          transform: translateX(-100%);
+          z-index: 1;
+          opacity: 0;
         }
 
         .q-options {
           padding-bottom: 10px;
           border-right: none;
           border-bottom: 2px solid gray;
+          overflow-y: auto; /* Allow text scroll if question is long */
+        }
+
+        .nav-indicator {
+          display: block;
         }
       }
     </style>
   </head>
   <body>
-    <div class="main-container">
-      <!-- <div class="question-tab">
-        <div class="q-options">
-          <h1><span>1. </span>A RED TRAFFIC LIGHT MEANS</h1>
-          <p style="margin-bottom: 10px; color: gray">Options:</p>
-          <ul class="options">
-            <li>MUST STOP BEHIND WHITE STOP LINE</li>
-            <li>YOU MAY GO STRAIGHT</li>
-            <li>YOU MAY TURN LEFT IF IT IS SAFE TO DO SO</li>
-            <li>
-              YOU MUST SLOW DOWN AND PREPARE TO STOP IF TRAFFIC HAS STARTED TO
-              CROSS
-            </li>
-          </ul>
-        </div>
-        <img src="data/img/img1.png" alt="" />
-      </div> -->
+    <div style="width: 100%">
+      <div class="main-container"></div>
+      <div class="nav-indicator">
+        <span id="current-count">1</span> / <span id="total-count">0</span
+        ><br />
+        <small>(Swipe Left/Right)</small>
+      </div>
     </div>
     <script>
       const questionData = [
@@ -1242,31 +1288,100 @@
           answerOption: "a",
         },
       ];
+      const container = document.querySelector(".main-container");
 
-      questionData.forEach((item) => {
+      // 1. RENDER THE HTML
+      questionData.forEach((item, index) => {
         const { id, question, imageID, options, answerOption } = item;
 
-        const html = `<div class="question-tab">
-        <div class="q-options">
-          <h1><span>${id}. </span>${question}</h1>
-          <p style="margin-bottom: 10px; color: gray">Options:</p>
-          <ul class="options">
-            <li style="${answerOption === "a" ? "color: orangeRed; font-weight:bold;" : ""}"><i>a.</i> ${options.a}</li>
-            <li style="${answerOption === "b" ? "color: orangeRed; font-weight:bold;" : ""}"><i>b.</i> ${options.b}</li>
-            <li style="${answerOption === "c" ? "color: orangeRed; font-weight:bold;" : ""}"><i>c.</i> ${options.c}</li>
-            <li style="${answerOption === "d" ? "color: orangeRed; font-weight:bold;" : ""}"><i>d.</i> 
-              ${options.d}
-            </li>
-          </ul>
-        </div>
-        <div class="img-container">
-        <img src="data/img/${imageID}.png" alt="" />
-      </div>`;
+        // Note: added 'active' class to the first item (index === 0)
+        const isActive = index === 0 ? "active" : "";
 
-        document
-          .querySelector(".main-container")
-          .insertAdjacentHTML("beforeend", html);
+        const html = `
+        <div class="question-tab ${isActive}" data-index="${index}">
+            <div class="q-options">
+              <h1><span>${id}. </span>${question}</h1>
+              <p style="margin-bottom: 10px; color: gray">Options:</p>
+              <ul class="options">
+                <li style="${answerOption === "a" ? "color: orangeRed; font-weight:bold;" : ""}"><i>a.</i> ${options.a}</li>
+                <li style="${answerOption === "b" ? "color: orangeRed; font-weight:bold;" : ""}"><i>b.</i> ${options.b}</li>
+                <li style="${answerOption === "c" ? "color: orangeRed; font-weight:bold;" : ""}"><i>c.</i> ${options.c}</li>
+                <li style="${answerOption === "d" ? "color: orangeRed; font-weight:bold;" : ""}"><i>d.</i> ${options.d}</li>
+              </ul>
+            </div>
+            <div class="img-container">
+                <img src="data/img/${!imageID ? "no-image" : imageID}.png" alt="Image ${id}" onerror="this.style.display='none'"/>
+            </div>
+        </div>`;
+
+        container.insertAdjacentHTML("beforeend", html);
       });
+
+      // Update Total Count
+      document.getElementById("total-count").innerText = questionData.length;
+
+      // 2. SWIPE LOGIC
+      let startX = 0;
+      let endX = 0;
+      let currentIndex = 0;
+      const tabs = document.querySelectorAll(".question-tab");
+      const countDisplay = document.getElementById("current-count");
+
+      // Function to handle the slide transition
+      function updateCards() {
+        tabs.forEach((tab, index) => {
+          tab.classList.remove("active", "prev");
+
+          if (index === currentIndex) {
+            tab.classList.add("active"); // Center screen
+          } else if (index < currentIndex) {
+            tab.classList.add("prev"); // Move to left (off screen)
+          } else {
+            // Default CSS handles index > currentIndex (Move to right off screen)
+          }
+        });
+        countDisplay.innerText = currentIndex + 1;
+      }
+
+      // Touch Start
+      container.addEventListener(
+        "touchstart",
+        (e) => {
+          startX = e.changedTouches[0].screenX;
+        },
+        { passive: true },
+      );
+
+      // Touch End
+      container.addEventListener(
+        "touchend",
+        (e) => {
+          endX = e.changedTouches[0].screenX;
+          handleSwipe();
+        },
+        { passive: true },
+      );
+
+      function handleSwipe() {
+        // Threshold: How far user must swipe to trigger change (50px)
+        const threshold = 50;
+
+        if (startX - endX > threshold) {
+          // Swiped Left -> Go Next
+          if (currentIndex < tabs.length - 1) {
+            currentIndex++;
+            updateCards();
+          }
+        }
+
+        if (endX - startX > threshold) {
+          // Swiped Right -> Go Previous
+          if (currentIndex > 0) {
+            currentIndex--;
+            updateCards();
+          }
+        }
+      }
     </script>
   </body>
 </html>
