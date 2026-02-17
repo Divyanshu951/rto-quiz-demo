@@ -22,6 +22,8 @@
         display: flex;
         justify-content: center;
         padding: 20px;
+        background-color: rgba(0, 0, 0, 0.8);
+        color: #fff;
       }
 
       .options {
@@ -29,7 +31,7 @@
       }
 
       .question-tab {
-        border: 2px solid black;
+        border: 2px solid gray;
         padding: 20px;
         border-radius: 10px;
         margin-bottom: 10px;
@@ -38,8 +40,14 @@
       }
 
       .q-options {
-        border-right: 2px solid black;
+        border-right: 2px solid gray;
         flex: 1 1 60%;
+      }
+
+      .img-container {
+        display: flex;
+        justify-content: center;
+        align-items: center;
       }
 
       img {
@@ -67,7 +75,7 @@
         .q-options {
           padding-bottom: 10px;
           border-right: none;
-          border-bottom: 2px solid black;
+          border-bottom: 2px solid gray;
         }
       }
     </style>
@@ -1240,14 +1248,15 @@
           <h1><span>${id}. </span>${question}</h1>
           <p style="margin-bottom: 10px; color: gray">Options:</p>
           <ul class="options">
-            <li style="${answerOption === "a" ? "color: green;" : ""}"><i>a.</i> ${options.a}</li>
-            <li style="${answerOption === "b" ? "color: green;" : ""}"><i>b.</i> ${options.b}</li>
-            <li style="${answerOption === "c" ? "color: green;" : ""}"><i>c.</i> ${options.c}</li>
-            <li style="${answerOption === "d" ? "color: green;" : ""}"><i>d.</i> 
+            <li style="${answerOption === "a" ? "color: orangeRed; font-weight:bold;" : ""}"><i>a.</i> ${options.a}</li>
+            <li style="${answerOption === "b" ? "color: orangeRed; font-weight:bold;" : ""}"><i>b.</i> ${options.b}</li>
+            <li style="${answerOption === "c" ? "color: orangeRed; font-weight:bold;" : ""}"><i>c.</i> ${options.c}</li>
+            <li style="${answerOption === "d" ? "color: orangeRed; font-weight:bold;" : ""}"><i>d.</i> 
               ${options.d}
             </li>
           </ul>
         </div>
+        <div class="img-container">
         <img src="data/img/${imageID}.png" alt="" />
       </div>`;
 
