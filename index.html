@@ -85,7 +85,7 @@
       @media (max-width: 480px) {
         .main-container {
           max-width: 100%;
-          height: 90vh; /* Fixed height for the card container */
+          height: 80vh; /* Fixed height for the card container */
           position: relative; /* Needed for absolute positioning children */
           overflow: hidden; /* Hide cards that are off-screen */
         }
@@ -1315,7 +1315,7 @@
               </ul>
             </div>
             <div class="img-container">
-                <img src="data/img/${!imageID ? "no-image" : imageID}.png" alt="Image ${id}" onerror="this.style.display='none'"/>
+                <img src="data/img/${!imageID ? "no-image.gif" : imageID + ".png"}" alt="Image ${id}" onerror="this.style.display='none'"/>
             </div>
         </div>`;
 
