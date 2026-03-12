@@ -27,6 +27,8 @@
         padding: 20px;
         background-color: rgba(0, 0, 0, 0.8);
         color: #fff;
+        /* Added top padding so the first question isn't hidden by the floating score */
+        padding-top: 80px;
       }
 
       .main-container {
@@ -110,6 +112,41 @@
         opacity: 0.5;
       }
 
+      /* --- NEW SCORE CONTAINER DESIGN --- */
+      .score-container {
+        position: fixed;
+        top: 20px;
+        right: 20px; /* Moved to the right for a more standard look */
+        padding: 12px 24px;
+        background: rgba(0, 0, 0, 0.8);
+        color: #fff;
+        border-radius: 30px;
+        font-family: "Manrope", sans-serif;
+        font-weight: 700;
+        font-size: 1.25rem;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        z-index: 1000;
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(5px);
+      }
+
+      .score-container::before {
+        content: "Score:";
+        font-size: 1rem;
+        font-weight: 500;
+        opacity: 0.8;
+        margin-right: 5px;
+      }
+
+      .score-numbers {
+        background: rgba(0, 0, 0, 0.2);
+        padding: 4px 12px;
+        border-radius: 20px;
+      }
+
       @media (max-width: 768px) {
         .question-tab {
           flex-direction: column;
@@ -120,10 +157,24 @@
           border-right: none;
           border-bottom: 2px solid gray;
         }
+        .score-container {
+          top: 10px;
+          right: 10px;
+          font-size: 1rem;
+          padding: 8px 16px;
+        }
+        body {
+          padding-top: 70px;
+        }
       }
     </style>
   </head>
   <body>
+    <div class="score-container">
+      <div class="score-numbers">
+        <span class="scored">0</span> / <span class="total">0</span>
+      </div>
+    </div>
     <div class="main-container"></div>
 
     <script>
@@ -1266,14 +1317,17 @@
           answerOption: "a",
         },
       ];
-
       const mainContainer = document.querySelector(".main-container");
+      const totalAttemptedEle = document.querySelector(".total");
+      const scoreEle = document.querySelector(".scored");
+
+      let attempted = 0;
+      let scored = 0;
 
       // 1. Generate the HTML for the questions
       questionData.forEach((item) => {
         const { id, question, imageID, options, answerOption } = item;
 
-        // Notice we added data-id and data-choice to the li tags so JS knows what was clicked
         const html = `
         <div class="question-tab">
           <div class="q-options">
@@ -1296,14 +1350,12 @@
 
       // 2. Add Event Listener to handle the clicks
       mainContainer.addEventListener("click", function (event) {
-        // Check if what was clicked was an option item
         const clickedOption = event.target.closest(".option-item");
 
-        if (!clickedOption) return; // If clicked somewhere else, do nothing
+        if (!clickedOption) return;
 
         const optionsList = clickedOption.closest(".options");
 
-        // Prevent clicking again if already answered
         if (optionsList.classList.contains("answered")) return;
 
         const questionId = parseInt(
@@ -1311,22 +1363,21 @@
         );
         const userChoice = clickedOption.getAttribute("data-choice");
 
-        // Find the correct answer from our data array
         const question = questionData.find((q) => q.id === questionId);
         const correctAnswer = question.answerOption;
 
-        // Lock the question so it can't be clicked again
+        // Lock the question
         optionsList.classList.add("answered");
 
-        // Check if the user is correct
+        // --- NEW LOGIC: Update scores ---
+        attempted++; // Always increment attempted count
+
         if (userChoice === correctAnswer) {
-          // User got it right
           clickedOption.classList.add("correct");
+          scored++; // Increment score if correct
         } else {
-          // User got it wrong
           clickedOption.classList.add("wrong");
 
-          // Still show them which one was actually correct!
           const correctOptionElement = optionsList.querySelector(
             `[data-choice="${correctAnswer}"]`,
           );
@@ -1334,6 +1385,10 @@
             correctOptionElement.classList.add("correct");
           }
         }
+
+        // --- NEW LOGIC: Render new scores to DOM ---
+        scoreEle.textContent = scored;
+        totalAttemptedEle.textContent = attempted;
       });
     </script>
   </body>
