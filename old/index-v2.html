@@ -27,105 +27,127 @@
         padding: 20px;
         background-color: rgba(0, 0, 0, 0.8);
         color: #fff;
+        min-height: 100vh; /* Ensure body takes full height */
       }
 
       .main-container {
         width: 100%;
       }
 
+      .options {
+        list-style-type: none;
+      }
+
       .question-tab {
         border: 2px solid gray;
         padding: 20px;
         border-radius: 10px;
-        margin-bottom: 20px;
+        margin-bottom: 10px;
         display: flex;
         gap: 20px;
-        background-color: #1a1a1a;
       }
 
       .q-options {
         border-right: 2px solid gray;
         flex: 1 1 60%;
-        padding-right: 20px;
       }
 
       .img-container {
         display: flex;
         justify-content: center;
         align-items: center;
-        flex: 1 1 40%;
       }
 
       img {
-        max-width: 100%;
-        height: auto;
-        border-radius: 8px;
+        width: fit-content;
+        max-width: 100%; /* Prevent overflow */
+        padding: 20px;
       }
 
       h1 {
         font-family: "Manrope", sans-serif;
-        margin-bottom: 15px;
-        font-size: 1.5rem;
-      }
-
-      .options {
-        list-style-type: none;
-      }
-
-      /* Styling for the clickable options */
-      .option-item {
-        background-color: #333;
-        padding: 12px 15px;
         margin-bottom: 10px;
-        border-radius: 6px;
-        cursor: pointer;
-        transition: background-color 0.2s ease;
-        border: 1px solid transparent;
       }
 
-      .option-item:hover {
-        background-color: #444;
+      .options li {
+        margin-bottom: 5px;
       }
 
-      /* Styles applied via JavaScript when clicked */
-      .option-item.correct {
-        background-color: #2e7d32; /* Green */
-        color: white;
-        border-color: #4caf50;
+      /* Navigation dots for mobile */
+      .nav-indicator {
+        display: none;
+        text-align: center;
+        margin-top: 10px;
+        color: gray;
       }
 
-      .option-item.wrong {
-        background-color: #c62828; /* Red */
-        color: white;
-        border-color: #ef5350;
-      }
+      /* --- MOBILE SWIPE LOGIC CSS --- */
+      @media (max-width: 480px) {
+        .main-container {
+          max-width: 100%;
+          height: 90vh; /* Fixed height for the card container */
+          position: relative; /* Needed for absolute positioning children */
+          overflow: hidden; /* Hide cards that are off-screen */
+        }
 
-      /* Disable clicking after an answer is chosen */
-      .options.answered .option-item {
-        pointer-events: none;
-      }
-
-      /* Keep unselected options slightly faded after answering */
-      .options.answered .option-item:not(.correct):not(.wrong) {
-        opacity: 0.5;
-      }
-
-      @media (max-width: 768px) {
         .question-tab {
           flex-direction: column;
+          height: 100%;
+          width: 100%;
+
+          /* Absolute positioning to stack them */
+          position: absolute;
+          top: 0;
+          left: 0;
+
+          /* Transition for the swipe animation */
+          transition:
+            transform 0.3s ease-in-out,
+            opacity 0.3s ease;
+          opacity: 0;
+          pointer-events: none; /* Prevent clicking hidden cards */
+
+          /* Start off-screen to the right by default */
+          transform: translateX(100%);
         }
+
+        /* The class active will be added by JS to show the current card */
+        .question-tab.active {
+          opacity: 1;
+          pointer-events: all;
+          transform: translateX(0);
+          z-index: 2;
+        }
+
+        /* Class for cards that have been swiped to the left */
+        .question-tab.prev {
+          transform: translateX(-100%);
+          z-index: 1;
+          opacity: 0;
+        }
+
         .q-options {
-          padding-right: 0;
-          padding-bottom: 20px;
+          padding-bottom: 10px;
           border-right: none;
           border-bottom: 2px solid gray;
+          overflow-y: auto; /* Allow text scroll if question is long */
+        }
+
+        .nav-indicator {
+          display: block;
         }
       }
     </style>
   </head>
   <body>
-    <div class="main-container"></div>
-
+    <div style="width: 100%">
+      <div class="main-container"></div>
+      <div class="nav-indicator">
+        <span id="current-count">1</span> / <span id="total-count">0</span
+        ><br />
+        <small>(Swipe Left/Right)</small>
+      </div>
+    </div>
     <script>
       const questionData = [
         {
@@ -1266,75 +1288,100 @@
           answerOption: "a",
         },
       ];
+      const container = document.querySelector(".main-container");
 
-      const mainContainer = document.querySelector(".main-container");
-
-      // 1. Generate the HTML for the questions
-      questionData.forEach((item) => {
+      // 1. RENDER THE HTML
+      questionData.forEach((item, index) => {
         const { id, question, imageID, options, answerOption } = item;
 
-        // Notice we added data-id and data-choice to the li tags so JS knows what was clicked
+        // Note: added 'active' class to the first item (index === 0)
+        const isActive = index === 0 ? "active" : "";
+
         const html = `
-        <div class="question-tab">
-          <div class="q-options">
-            <h1><span>${id}. </span>${question}</h1>
-            <p style="margin-bottom: 15px; color: #aaa;">Select an option below:</p>
-            <ul class="options" data-question-id="${id}">
-              <li class="option-item" data-choice="a"><b>a.</b> ${options.a}</li>
-              <li class="option-item" data-choice="b"><b>b.</b> ${options.b}</li>
-              <li class="option-item" data-choice="c"><b>c.</b> ${options.c}</li>
-              <li class="option-item" data-choice="d"><b>d.</b> ${options.d}</li>
-            </ul>
-          </div>
-          <div class="img-container">
-            <img src="data/img/${imageID}.png" alt="Question Image" onerror="this.style.display='none'" />
-          </div>
+        <div class="question-tab ${isActive}" data-index="${index}">
+            <div class="q-options">
+              <h1><span>${id}. </span>${question}</h1>
+              <p style="margin-bottom: 10px; color: gray">Options:</p>
+              <ul class="options">
+                <li style="${answerOption === "a" ? "color: orangeRed; font-weight:bold;" : ""}"><i>a.</i> ${options.a}</li>
+                <li style="${answerOption === "b" ? "color: orangeRed; font-weight:bold;" : ""}"><i>b.</i> ${options.b}</li>
+                <li style="${answerOption === "c" ? "color: orangeRed; font-weight:bold;" : ""}"><i>c.</i> ${options.c}</li>
+                <li style="${answerOption === "d" ? "color: orangeRed; font-weight:bold;" : ""}"><i>d.</i> ${options.d}</li>
+              </ul>
+            </div>
+            <div class="img-container">
+                <img src="data/img/${!imageID ? "no-image.gif" : imageID + ".png"}" alt="Image ${id}" onerror="this.style.display='none'"/>
+            </div>
         </div>`;
 
-        mainContainer.insertAdjacentHTML("beforeend", html);
+        container.insertAdjacentHTML("beforeend", html);
       });
 
-      // 2. Add Event Listener to handle the clicks
-      mainContainer.addEventListener("click", function (event) {
-        // Check if what was clicked was an option item
-        const clickedOption = event.target.closest(".option-item");
+      // Update Total Count
+      document.getElementById("total-count").innerText = questionData.length;
 
-        if (!clickedOption) return; // If clicked somewhere else, do nothing
+      // 2. SWIPE LOGIC
+      let startX = 0;
+      let endX = 0;
+      let currentIndex = 0;
+      const tabs = document.querySelectorAll(".question-tab");
+      const countDisplay = document.getElementById("current-count");
 
-        const optionsList = clickedOption.closest(".options");
+      // Function to handle the slide transition
+      function updateCards() {
+        tabs.forEach((tab, index) => {
+          tab.classList.remove("active", "prev");
 
-        // Prevent clicking again if already answered
-        if (optionsList.classList.contains("answered")) return;
+          if (index === currentIndex) {
+            tab.classList.add("active"); // Center screen
+          } else if (index < currentIndex) {
+            tab.classList.add("prev"); // Move to left (off screen)
+          } else {
+            // Default CSS handles index > currentIndex (Move to right off screen)
+          }
+        });
+        countDisplay.innerText = currentIndex + 1;
+      }
 
-        const questionId = parseInt(
-          optionsList.getAttribute("data-question-id"),
-        );
-        const userChoice = clickedOption.getAttribute("data-choice");
+      // Touch Start
+      container.addEventListener(
+        "touchstart",
+        (e) => {
+          startX = e.changedTouches[0].screenX;
+        },
+        { passive: true },
+      );
 
-        // Find the correct answer from our data array
-        const question = questionData.find((q) => q.id === questionId);
-        const correctAnswer = question.answerOption;
+      // Touch End
+      container.addEventListener(
+        "touchend",
+        (e) => {
+          endX = e.changedTouches[0].screenX;
+          handleSwipe();
+        },
+        { passive: true },
+      );
 
-        // Lock the question so it can't be clicked again
-        optionsList.classList.add("answered");
+      function handleSwipe() {
+        // Threshold: How far user must swipe to trigger change (50px)
+        const threshold = 50;
 
-        // Check if the user is correct
-        if (userChoice === correctAnswer) {
-          // User got it right
-          clickedOption.classList.add("correct");
-        } else {
-          // User got it wrong
-          clickedOption.classList.add("wrong");
-
-          // Still show them which one was actually correct!
-          const correctOptionElement = optionsList.querySelector(
-            `[data-choice="${correctAnswer}"]`,
-          );
-          if (correctOptionElement) {
-            correctOptionElement.classList.add("correct");
+        if (startX - endX > threshold) {
+          // Swiped Left -> Go Next
+          if (currentIndex < tabs.length - 1) {
+            currentIndex++;
+            updateCards();
           }
         }
-      });
+
+        if (endX - startX > threshold) {
+          // Swiped Right -> Go Previous
+          if (currentIndex > 0) {
+            currentIndex--;
+            updateCards();
+          }
+        }
+      }
     </script>
   </body>
 </html>
